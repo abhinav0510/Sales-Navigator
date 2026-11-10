@@ -1,0 +1,31 @@
+# Subscription plans (prices in paise, before 18% GST).
+# Seeded into the `plan` table by `python -m app.cli seed`.
+# Leads are counted ONLY when delivered (PASS / DEGRADE / accepted HOLD).
+plans:
+  trial:
+    name: Free trial
+    price_paise: 0
+    monthly_leads: 25
+    seats: 1
+    features: [csv]
+  starter:
+    name: Starter
+    price_paise: 199900        # Rs 1,999
+    monthly_leads: 150
+    seats: 1
+    features: [csv]
+  growth:
+    name: Growth
+    price_paise: 599900        # Rs 5,999
+    monthly_leads: 600
+    seats: 3
+    features: [csv, signals]
+  pro:
+    name: Pro
+    price_paise: 1499900       # Rs 14,999 (kept under the Rs 15,000 RBI e-mandate limit)
+    monthly_leads: 1500
+    seats: 10
+    features: [csv, signals, api, priority]
+
+new_workspace_plan: trial
+gst_rate: 0.18

@@ -1,0 +1,41 @@
+# Sales Navigator backend - pinned runtime + test dependencies.
+# Install:  python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+
+# --- Web / API tier --------------------------------------------------------
+fastapi==0.162.2
+uvicorn[standard]==0.54.0
+python-multipart==0.0.33
+email-validator==2.3.0
+
+# --- Data tier (PostgreSQL via psycopg 3 + SQLAlchemy Core) -----------------
+SQLAlchemy==2.1.8
+psycopg[binary]==3.3.8
+
+# --- Config / validation ----------------------------------------------------
+pydantic==2.14.3
+pydantic-settings==2.16.2
+PyYAML==6.0.3
+simpleeval==1.0.8          # safe expression evaluation for planner rules (never eval())
+
+# --- Security ---------------------------------------------------------------
+argon2-cffi==25.1.0        # password hashing
+PyJWT==2.15.1              # access tokens
+cryptography==50.0.2       # AES-GCM encryption of secrets and contact values
+
+# --- Data processing --------------------------------------------------------
+httpx==0.28.1              # outbound HTTP for crawler / Brave adapter
+phonenumbers==9.0.43
+tldextract==5.4.0
+rapidfuzz==3.14.6
+dnspython==2.9.2           # MX lookups for the SMTP verifier
+Unidecode==1.4.0
+
+# --- AI ---------------------------------------------------------------------
+anthropic==2.7.0
+
+# --- Observability ----------------------------------------------------------
+structlog==26.1.0
+prometheus-client==0.26.0
+
+# --- Tests ------------------------------------------------------------------
+pytest==9.2.0

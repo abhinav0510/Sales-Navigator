@@ -1,0 +1,14 @@
+[project]
+name = "sales-navigator"
+version = "0.1.0"
+description = "Sales Navigator - multi-tenant lead discovery SaaS (application tier)"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "integration: needs a running PostgreSQL (uses the *_test database)",
+    "golden: end-to-end golden test cases",
+]
+filterwarnings = ["ignore::DeprecationWarning"]

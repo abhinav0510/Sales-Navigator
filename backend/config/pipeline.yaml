@@ -1,0 +1,25 @@
+# Search pipeline knobs (LLD 5-6). Change here, not in code.
+
+# Decision-makers delivered per company. 1 = the single best persona, so a
+# customer never receives several people from the same company in one search.
+people_per_company: 1
+
+# The email-pattern engine tries this many candidate addresses per person,
+# checked with our own SMTP verifier (no per-check cost).
+max_email_candidates: 4
+
+# Discovery stops collecting once it holds this many candidates per lead wanted.
+candidate_pool_multiplier: 5
+
+# Discovery web searches per region scope (different phrasings of the ICP).
+queries_per_scope: 3
+
+# Default search budget = max(estimate x this factor, minimum).
+budget_factor: 2.5
+min_budget_paise: 5000          # Rs 50
+
+# Countries' typical email formats, most common first (used when a domain's
+# format has not been learned from a published address yet).
+email_pattern_priors:
+  IN: ["{first}", "{first}.{last}", "{f}{last}", "{first}{last}"]
+  default: ["{first}.{last}", "{first}", "{f}{last}", "{first}{last}"]

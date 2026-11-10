@@ -1,0 +1,15 @@
+# Caddy reverse proxy (HLD 9.1, Stage 1 single VPS). Automatic HTTPS via Let's Encrypt.
+# Replace the two domains, then: sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+
+app.example.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000          # presentation tier (Next.js)
+}
+
+api.example.com {
+	encode gzip
+	# /metrics is for Prometheus only - never expose it publicly.
+	@metrics path /metrics
+	respond @metrics 404
+	reverse_proxy 127.0.0.1:8000          # application tier (FastAPI)
+}

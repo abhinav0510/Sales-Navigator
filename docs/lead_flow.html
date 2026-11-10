@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead Extraction Flow</title>
+<style>
+  :root {
+    --bg: #f8fafc; --fg: #0f172a; --muted: #475569; --card: #ffffff; --border: #e2e8f0;
+    --user: #2563eb; --decision: #d97706; --ai: #7c3aed; --good: #16a34a; --stop: #dc2626;
+  }
+  :root:not([data-theme="light"]) {}
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1220; --fg: #e2e8f0; --muted: #94a3b8; --card: #0f172a; --border: #1e293b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1220; --fg: #e2e8f0; --muted: #94a3b8; --card: #0f172a; --border: #1e293b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  header p { margin: 0 0 16px; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 16px 0 24px; padding: 12px 16px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; font-size: .9rem; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  button { background: var(--card); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px; font-size: .9rem; cursor: pointer; }
+  button:hover { border-color: var(--user); }
+  .diagram { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 8px; overflow: auto; }
+  .diagram svg { max-width: none !important; height: auto; }
+  footer { margin-top: 24px; color: var(--muted); font-size: .85rem; }
+  a { color: var(--user); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Lead Extraction Flow</h1>
+    <p>Every step and decision from "New search" to delivered, exported leads. Matches HLD §6.2 and LLD §5–6.</p>
+  </header>
+
+  <div class="legend">
+    <span><i class="dot" style="background:var(--user)"></i> User action</span>
+    <span><i class="dot" style="background:var(--decision)"></i> Decision</span>
+    <span><i class="dot" style="background:var(--ai)"></i> AI step</span>
+    <span><i class="dot" style="background:var(--good)"></i> Good outcome</span>
+    <span><i class="dot" style="background:var(--stop)"></i> Stop / drop</span>
+  </div>
+
+  <div class="toolbar">
+    <button id="zoomin">Zoom in (+)</button>
+    <button id="zoomout">Zoom out (−)</button>
+    <button id="zoomreset">Reset</button>
+    <button id="theme">Toggle light / dark</button>
+  </div>
+
+  <div class="diagram" id="diagramBox">
+    <pre class="mermaid" id="mermaid">
+flowchart TD
+  classDef decision fill:#fff4e5,stroke:#d97706,color:#1f2937
+  classDef stop fill:#fde2e1,stroke:#dc2626,color:#1f2937
+  classDef good fill:#dcfce7,stroke:#16a34a,color:#1f2937
+  classDef ai fill:#ede9fe,stroke:#7c3aed,color:#1f2937
+  classDef user fill:#dbeafe,stroke:#2563eb,color:#1f2937
+
+  S(["User clicks New search"]):::user --> A1{"Subscription status?"}:::decision
+  A1 -- "readonly / halted" --> A1X["Blocked: show billing page"]:::stop
+  A1 -- "trial / active / grace" --> A2{"Leads left in quota?"}:::decision
+  A2 -- "none and no overage" --> A2X["Prompt upgrade or overage"]:::stop
+
+  subgraph P1["1. Business understanding"]
+    B1{"Active ICP exists?"}:::decision
+    B2["User gives website, description, seed customers"]:::user
+    B3["Crawl website up to 15 pages, enrich seed customers"]
+    B4["AI builds ICP, suggests 2-3 starting segments"]:::ai
+    B5["User reviews and edits ICP"]:::user
+    B6{"Focused segment chosen?"}:::decision
+    B7["Warn: broad search, lower quality expected"]
+    B1 -- no --> B2 --> B3 --> B4 --> B5 --> B6
+    B1 -- yes --> B6
+    B6 -- "broad: search whole ICP" --> B7
+  end
+
+  subgraph P2["2. Region"]
+    C1["User types region: global, country, state, city, radius"]:::user
+    C2{"Place in built-in table?"}:::decision
+    C3["One external geocode lookup, cached"]
+    C3b{"Found now?"}:::decision
+    C3c{"Fewer than 2 failed tries?"}:::decision
+    C3x["Show Did-you-mean suggestions, ask to re-type"]:::user
+    C3y["Forced choice, no blank box: pick suggestion, search parent area, or map pin with radius; log unresolved name"]:::user
+    C4{"Ambiguous name?"}:::decision
+    C5["User picks the right place"]:::user
+    C6{"Global?"}:::decision
+    C7["Ranked market list, per-country quota, user edits"]:::user
+    C8["GeoScope ready"]:::good
+    C1 --> C2
+    C2 -- no --> C3 --> C3b
+    C3b -- no --> C3c
+    C3c -- yes --> C3x --> C1
+    C3c -- "no: 2 tries used" --> C3y --> C4
+    C3b -- yes --> C4
+    C2 -- yes --> C4
+    C4 -- yes --> C5 --> C6
+    C4 -- no --> C6
+    C6 -- yes --> C7 --> C8
+    C6 -- no --> C8
+  end
+
+  subgraph P3["3. Search Planner: which path?"]
+    D1["Extract features: seller mode, size, local ratio, seeds, triggers, sources, plan"]
+    D2{"Seller mode?"}:::decision
+    D3{"B2C wants contacts?"}:::decision
+    D4["AUDIENCE_INSIGHT: market report, no personal contacts"]:::good
+    D11["B2B2C: target businesses that reach the consumers"]
+    D5["Apply rules: LOCAL / B2B / mixed; add LOOKALIKE if 5+ seeds; add SIGNAL if triggers; drop paths with no source"]
+    D6{"Clear winner and unambiguous?"}:::decision
+    D7["AI tie-break between top two paths"]:::ai
+    D8{"Confidence at least 0.6?"}:::decision
+    D9["Ask one clarifying question"]:::user
+    D10["SearchPlan: paths, quota split, sources, roles, contacts"]:::good
+    D1 --> D2
+    D2 -- "B2B" --> D5
+    D2 -- "B2C" --> D3
+    D3 -- no --> D4
+    D3 -- yes --> D11 --> D5
+    D5 --> D6
+    D6 -- yes --> D8
+    D6 -- no --> D7 --> D8
+    D8 -- no --> D9 --> D1
+    D8 -- yes --> D10
+  end
+
+  subgraph P4["4. Estimate and confirm"]
+    E1["Estimate: candidates, Brave queries, AI tokens, rupee cost, quota impact"]
+    E2{"Quota covers target?"}:::decision
+    E3{"Overage enabled?"}:::decision
+    E4["User reduces target or upgrades"]:::user
+    E5{"User action?"}:::decision
+    E6["User overrides paths"]:::user
+    E7["Reserve quota, lock budget, status RUNNING"]:::good
+    E1 --> E2
+    E2 -- yes --> E5
+    E2 -- no --> E3
+    E3 -- yes --> E5
+    E3 -- no --> E4 --> E1
+    E5 -- "override" --> E6 --> E1
+    E5 -- "run" --> E7
+  end
+
+  subgraph P5["5. Discovery, chosen paths in parallel"]
+    F1["Run paths by quota share"]
+    F2{"In shared knowledge store?"}:::decision
+    F3["Use stored data, free"]:::good
+    F4{"Cached source response?"}:::decision
+    F5{"Source down or no key?"}:::decision
+    F6["Skip source, note reduced coverage"]
+    F7{"Budget left?"}:::decision
+    F8["PAUSE: ask to raise budget"]:::stop
+    F9["Call source: Brave, Overture, registries, jobs, news, plug-ins"]
+    F10["Candidate companies, up to 5x target"]
+    F1 --> F2
+    F2 -- yes --> F3 --> F10
+    F2 -- no --> F4
+    F4 -- yes --> F10
+    F4 -- no --> F5
+    F5 -- yes --> F6 --> F10
+    F5 -- no --> F7
+    F7 -- no --> F8
+    F8 -- "budget raised" --> F9
+    F7 -- yes --> F9 --> F10
+  end
+
+  subgraph P6["6. Resolve and qualify companies"]
+    G1{"Match score vs existing?"}:::decision
+    G2["0.80+: merge, keep all sources"]
+    G3["0.65-0.80: flag possible duplicate"]
+    G4["Below 0.65: new company"]
+    G5{"Excluded, suppressed or out of region?"}:::decision
+    G6["Drop company"]:::stop
+    G7["Collect signals: website, jobs, news, tech"]
+    G8["Rule score 0-60"]
+    G9["AI fit 0-40, reasons linked to evidence"]:::ai
+    G10{"AI says no fit?"}:::decision
+    G11{"Final score at least 60?"}:::decision
+    G1 -- high --> G2 --> G5
+    G1 -- medium --> G3 --> G5
+    G1 -- low --> G4 --> G5
+    G5 -- yes --> G6
+    G5 -- no --> G7 --> G8 --> G9 --> G10
+    G10 -- yes --> G6
+    G10 -- no --> G11
+    G11 -- no --> G6
+  end
+
+  subgraph P7["7. Find the right person"]
+    H1{"Path type?"}:::decision
+    H2["Owner or manager from website and place data"]
+    H3["Persona roles: store first, then Brave LinkedIn snippets"]
+    H4{"Matching person found?"}:::decision
+    H5{"Local business path?"}:::decision
+    H6["Up to 2 people per company, skip any already delivered to this customer"]:::good
+    H7["Business contact: phone, WhatsApp, generic email"]
+    H1 -- "LOCAL" --> H2 --> H4
+    H1 -- "B2B / LOOKALIKE / SIGNAL" --> H3 --> H4
+    H4 -- yes --> H6
+    H4 -- no --> H5
+    H5 -- yes --> H7
+  end
+
+  subgraph P8["8. Contact finding and checking"]
+    I1{"Valid email in store, under 14 days?"}:::decision
+    I2["Email pattern engine: top 3 guesses"]
+    I3["SMTP check, no email is sent"]
+    I4{"Result?"}:::decision
+    I5["Valid email"]:::good
+    I6["Catch-all: keep, lower confidence"]
+    I7{"Plug-ins on, left, score 70+?"}:::decision
+    I8["Paid email lookup"]
+    I9["No email"]
+    I10{"Score 70+ and mobile credits?"}:::decision
+    I11["Paid mobile lookup and check"]
+    I12["Business phone, WhatsApp, LinkedIn name check"]
+    I1 -- yes --> I5
+    I1 -- no --> I2 --> I3 --> I4
+    I4 -- valid --> I5
+    I4 -- "catch-all" --> I6
+    I4 -- "invalid / unknown" --> I7
+    I7 -- yes --> I8 --> I3
+    I7 -- no --> I9
+    I5 --> I10
+    I6 --> I10
+    I9 --> I10
+    I10 -- yes --> I11 --> I12
+    I10 -- no --> I12
+  end
+
+  subgraph P9["9. Compliance and message"]
+    J1{"Contact suppressed or erased?"}:::decision
+    J2["Remove that contact"]:::stop
+    J3["Flag phones: DNC check required"]
+    J4["AI writes opener citing one evidence item"]:::ai
+    J1 -- yes --> J2 --> J3
+    J1 -- no --> J3 --> J4
+  end
+
+  subgraph P10["10. Quality Judge"]
+    K1["Field checks; weak fields removed"]
+    K2{"Hard failure?"}:::decision
+    K3["Independent AI judge checks each reason vs evidence"]:::ai
+    K4["Calibrated confidence score"]
+    K5{"Judge disagrees, under 2 reasons, or recent job change?"}:::decision
+    K6{"Confidence?"}:::decision
+    K7{"Any field removed?"}:::decision
+    KP["PASS"]:::good
+    KD["DEGRADE"]:::good
+    KH["HOLD"]
+    KR["REJECT"]:::stop
+    K1 --> K2
+    K2 -- yes --> KR
+    K2 -- no --> K3 --> K4 --> K5
+    K5 -- yes --> KH
+    K5 -- no --> K6
+    K6 -- "0.80+" --> K7
+    K6 -- "0.60-0.80" --> KADJ{"Adjudication on and budget left?"}:::decision
+    K6 -- "below 0.60" --> KR
+    K7 -- yes --> KD
+    K7 -- no --> KP
+    KADJ -- no --> KH
+    KADJ -- yes --> KA["Stronger independent model, re-verify email/phone/employer, re-calibrate"]:::ai
+    KA --> KA2{"Recalibrated 0.80+?"}:::decision
+    KA2 -- yes --> KP
+    KA2 -- no --> KH
+  end
+
+  subgraph P11["11. Deliver, backfill, export, learn"]
+    L1["Deliver: stream to user, 1 lead from quota"]:::good
+    L2["Needs-review tab, not billed"]
+    L3{"User accepts?"}:::decision
+    L4["Not delivered, not billed; in Quality Report"]
+    L5{"Target reached?"}:::decision
+    L6{"Budget and candidates left?"}:::decision
+    L7["Planner moves quota to best path"]
+    L8["Complete: release unused quota, Quality Report"]:::good
+    L9["User reviews and exports"]:::user
+    L10{"Email over 14 days old?"}:::decision
+    L11["Re-check email before export"]
+    L12["CSV, Excel, Sheets, HubSpot, Zoho, webhook"]:::good
+    L13["Feedback and bounces train calibration; bounce in 30 days credits back"]
+    L2 --> L3
+    L3 -- yes --> L1
+    L3 -- no --> L4
+    L1 --> L5
+    L4 --> L5
+    L5 -- yes --> L8
+    L5 -- no --> L6
+    L6 -- yes --> L7
+    L6 -- "no: partial" --> L8
+    L8 --> L9 --> L10
+    L10 -- yes --> L11 --> L12
+    L10 -- no --> L12
+    L12 --> L13
+  end
+
+  A2 -- "yes" --> B1
+  B6 -- "focused segment" --> C1
+  B7 --> C1
+  C8 --> D1
+  D10 --> E1
+  E7 --> F1
+  F10 --> G1
+  G11 -- yes --> H1
+  H5 -- no --> G6
+  H6 --> I1
+  H7 --> J1
+  I12 --> J1
+  J4 --> K1
+  KP --> L1
+  KD --> L1
+  KH --> L2
+  KR --> L4
+  L7 -- "backfill" --> F1
+    </pre>
+  </div>
+
+  <footer>
+    Full text version: LEAD_FLOW.md · Design: HLD.md and LLD.md
+  </footer>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: prefersDark ? "dark" : "default",
+    flowchart: { useMaxWidth: false, htmlLabels: true, curve: "basis", nodeSpacing: 40, rankSpacing: 50 },
+    securityLevel: "strict"
+  });
+
+  let scale = 1;
+  const svgHost = () => document.querySelector("#diagramBox svg");
+  const apply = () => { const s = svgHost(); if (s) s.style.transform = `scale(${scale})`, s.style.transformOrigin = "top left"; };
+  document.getElementById("zoomin").onclick = () => { scale = Math.min(3, scale + 0.15); apply(); };
+  document.getElementById("zoomout").onclick = () => { scale = Math.max(0.3, scale - 0.15); apply(); };
+  document.getElementById("zoomreset").onclick = () => { scale = 1; apply(); };
+  document.getElementById("theme").onclick = () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    document.documentElement.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+  };
+</script>
+</body>
+</html>

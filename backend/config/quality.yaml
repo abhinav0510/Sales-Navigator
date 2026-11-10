@@ -1,0 +1,20 @@
+# Quality Judge thresholds (SYSTEM_DESIGN 5.14, LLD 6.12).
+pass_threshold: 0.80        # >= -> PASS (or DEGRADE if a weak field was removed)
+hold_threshold: 0.60        # 0.60-0.80 -> HOLD (needs review, not billed)
+                            # <  0.60 -> REJECT
+
+# Weights of the row-confidence formula (sum = 1.0).
+weights:
+  company: 0.25
+  person: 0.20
+  contact: 0.30
+  reasoning: 0.15
+  freshness: 0.10
+
+min_supported_reasons: 2
+never_redeliver_to_workspace: true      # permanent per-customer dedupe
+role_accounts_allowed_for_local: true    # info@ / sales@ ok for LOCAL_BUSINESS rows
+
+adjudication:
+  enabled: false                          # opt-in; default = HOLD waits for human review
+  max_per_search: 25

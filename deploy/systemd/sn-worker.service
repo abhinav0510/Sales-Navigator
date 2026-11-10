@@ -1,0 +1,16 @@
+# Background search worker. Run more copies (sn-worker@2, ...) for throughput:
+# jobs are claimed with FOR UPDATE SKIP LOCKED, so workers never collide.
+[Unit]
+Description=Sales Navigator search worker
+After=network.target postgresql.service
+
+[Service]
+User=salesnav
+WorkingDirectory=/opt/sales-navigator/backend
+EnvironmentFile=/opt/sales-navigator/backend/.env
+ExecStart=/opt/sales-navigator/backend/.venv/bin/python -m app.cli worker
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

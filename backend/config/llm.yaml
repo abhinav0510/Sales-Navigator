@@ -1,0 +1,35 @@
+# AI configuration. Model IDs and prices verified 2026-11-10.
+# Every AI call goes through app/modules/ai/ - nothing else calls the SDK.
+
+# Prices per 1M tokens, USD.
+prices:
+  claude-opus-5-5:   {input: 4.00, output: 20.00, cache_read: 0.20}
+  claude-sonnet-5-5: {input: 2.00, output: 10.00, cache_read: 0.10}
+  claude-haiku-5-5:  {input: 0.10, output: 0.50,  cache_read: 0.01}  # cache read = 10% of input
+
+# Per task: the ordered fallback ladder (first = primary) and output cap.
+# Rules (PROMPT_CACHING_AND_GUARDRAILS.md 5.2a):
+#   - the Quality Judge never falls below Sonnet; if none answers, rows stay in HOLD
+#   - the Judge model must differ from the fit-scoring (generator) model
+tasks:
+  icp:
+    ladder: [claude-sonnet-5-5, claude-haiku-5-5]
+    max_tokens: 4000
+    prompt_version: icp/v1
+  fit:
+    ladder: [claude-sonnet-5-5, claude-opus-5-5, claude-haiku-5-5]
+    max_tokens: 3000
+    prompt_version: fit/v1
+  judge:
+    ladder: [claude-opus-5-5, claude-sonnet-5-5]
+    max_tokens: 2000
+    prompt_version: judge/v1
+  opener:
+    ladder: [claude-sonnet-5-5, claude-haiku-5-5]
+    max_tokens: 400
+    prompt_version: opener/v1
+
+# Fit scoring sends this many companies per request (amortises the cached prefix).
+fit_batch_size: 5
+# Hard cap on AI tokens per search; above it, remaining companies use rule scores.
+search_token_budget: 400000

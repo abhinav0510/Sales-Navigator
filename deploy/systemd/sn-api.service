@@ -1,0 +1,18 @@
+# Application tier: FastAPI on 127.0.0.1:8000 (Caddy terminates TLS in front of it).
+# Install: sudo cp deploy/systemd/*.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#          sudo systemctl enable --now sn-api sn-worker sn-web
+[Unit]
+Description=Sales Navigator API
+After=network.target postgresql.service
+
+[Service]
+User=salesnav
+WorkingDirectory=/opt/sales-navigator/backend
+EnvironmentFile=/opt/sales-navigator/backend/.env
+ExecStartPre=/opt/sales-navigator/backend/.venv/bin/python -m app.cli migrate
+ExecStart=/opt/sales-navigator/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2 --proxy-headers
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+
+# Secrets and local-only files
+.env
+.env.local
+backend/.env
+frontend/.env.local
+backend/.demo-credentials
+
+# Generated test output (results are summarised in docs/HANDOVER.md)
+backend/tests/golden/reports/
+
+# OS
+.DS_Store

@@ -1,0 +1,50 @@
+# Search Planner rules (SYSTEM_DESIGN 5.2a, LLD 6.3).
+# Evaluated in order. `when` is a safe expression (simpleeval, never eval()).
+# Available names: seller_mode, target_size (set), local_ratio, has_seeds,
+#                  seed_count, trigger_strength, geo_level, wants_contacts,
+#                  enabled (set of usable source names)
+rules:
+  - id: b2c_insight_only
+    when: "seller_mode == 'b2c' and not wants_contacts"
+    add: {AUDIENCE_INSIGHT: 1.0}
+    stop: true
+    reason: "B2C seller without contact need -> market report only"
+
+  - id: b2c_contacts_to_b2b2c
+    when: "seller_mode == 'b2c' and wants_contacts"
+    add: {B2B2C: 1.0}
+    reason: "B2C seller -> target businesses that reach the consumers (no consumer PII)"
+
+  - id: local_primary
+    when: "seller_mode == 'b2b' and local_ratio >= 0.6"
+    add: {LOCAL_BUSINESS: 0.8}
+    reason: "ICP industries are mostly local, owner-run businesses"
+
+  - id: company_primary
+    when: "seller_mode == 'b2b' and local_ratio < 0.4"
+    add: {B2B_COMPANY: 0.8}
+    reason: "ICP targets companies with teams"
+
+  - id: mixed
+    when: "seller_mode == 'b2b' and local_ratio >= 0.4 and local_ratio < 0.6"
+    add: {LOCAL_BUSINESS: 0.5, B2B_COMPANY: 0.5}
+    reason: "ICP spans local businesses and companies"
+
+  - id: lookalike
+    when: "has_seeds and seed_count >= 3"
+    add: {LOOKALIKE: 0.3}
+    reason: "Seed customers given -> find similar companies"
+
+  - id: signals
+    when: "trigger_strength >= 0.6"
+    add: {SIGNAL_LED: 0.2}
+    reason: "Strong buying triggers in the ICP"
+
+# Industries that are genuinely ambiguous between local and company targets.
+# Matching one lowers planner confidence and triggers a clarifying question.
+ambiguous_industries:
+  healthcare: ["Clinic owners (single clinics)", "Hospital chains and groups"]
+  education: ["Individual schools and coaching centres", "School chains and ed-tech companies"]
+  hospitality: ["Independent restaurants and cafes", "Restaurant and hotel chains"]
+
+min_confidence: 0.6

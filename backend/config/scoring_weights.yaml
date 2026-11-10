@@ -1,0 +1,12 @@
+# Rule score (0-60). The AI fit score adds 0-40. Final = rule + AI.
+rule_weights:
+  industry_match: 18
+  size_match: 10
+  geo_precision: 6
+  tech_match: 6
+  persona_available: 8
+  trigger_signals: 8
+  website_quality: 4
+
+# A company moves on to people/contact search only at or above this score.
+company_threshold: 60
